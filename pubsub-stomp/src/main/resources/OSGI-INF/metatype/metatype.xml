@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or any later version. 
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ **/
+
+ -->
+<metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
+
+	<OCD name="Publish Subscribe Subscription Query Service" id="pubsub.subscription.query.service">
+		<AD
+			description="Destination Topic Name"
+			name="Destination Topic Name" id="destTopicName" required="true" type="String" 
+			default="/topic/query/subscription" 
+		/>
+		<AD
+			description="Subscription Topic Name"
+			name="Subscription Topic Name" id="subscribeTopicName" required="true" type="String" 
+			default="/topic/result/" 
+		/>
+		<AD
+			description="STOMP Host"
+			name="STOMP Host" id="stompHost" required="true" type="String" 
+			default="localhost" 
+		/>
+		<AD
+			description="STOMP Port"
+			name="STOMP Port" id="stompPort" required="true" type="Integer" 
+			default="61613" 
+		/>
+		<AD
+			description="STOMP Port"
+			name="STOMP Port" id="stompPort" required="true" type="Integer" 
+			default="61613" 
+		/>
+		<AD
+			description="Default Max Results Returned"
+			name="Default Max Results" id="defaultMaxResults" required="true" type="Integer" 
+			default="1000" 
+		/>
+		<AD
+			description="Default Request Timeout"
+			name="Default Request Timeout" id="defaultRequestTimeout" required="true" type="Integer" 
+			default="300000" 
+		/>
+	</OCD>
+
+	<Designate 	pid="pubsub.subscription.query.service">
+		<Object ocdref="pubsub.subscription.query.service" />
+	</Designate>
+
+</metatype:MetaData>

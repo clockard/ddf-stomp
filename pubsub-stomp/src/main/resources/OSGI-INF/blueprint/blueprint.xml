@@ -1,0 +1,47 @@
+<!-- 
+  - Copyright (c) Codice Foundation
+  -
+  - This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+  - version 3 of the License, or any later version. 
+  -
+  - This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  - See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+  - <http://www.gnu.org/licenses/lgpl.html>.
+  -
+ -->
+
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0" 
+    xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+  http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd"
+  >
+
+	<cm:property-placeholder persistent-id="pubsub.subscription.query.service">
+		<cm:default-properties>
+			<cm:property name="stompHost" value="localhost"/>
+			<cm:property name="stompPort" value="61613"/>
+			<cm:property name="destTopicName" value="/topic/query/subscription"/>
+			<cm:property name="stompPort" value="61613"/>
+			<cm:property name="defaultMaxResults" value="1000"/>
+			<cm:property name="defaultRequestTimeout" value="300000"/>
+			<cm:property name="subscribeTopicName" value="/topic/result/"/>
+		</cm:default-properties>
+	</cm:property-placeholder>
+
+    <bean id="msgListener"
+          class="org.codice.pubsub.stomp.SubscriptionQueryMessageListener"
+          destroy-method="destroy" init-method="initialize">
+          <argument>
+                <reference interface="ddf.catalog.CatalogFramework"/>
+          </argument>
+          <argument ref="blueprintBundleContext"/>
+          <argument value="${stompHost}"/>
+          <argument value="${stompPort}"/>
+          <argument value="${destTopicName}"/>
+          <argument value="${defaultMaxResults}"/>
+          <argument value="${defaultRequestTimeout}"/>
+          <argument value="${subscribeTopicName}"/>
+    </bean>	
+	
+</blueprint>
