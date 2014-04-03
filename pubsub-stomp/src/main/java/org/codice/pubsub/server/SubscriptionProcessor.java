@@ -20,6 +20,8 @@ import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.lang.StringUtils;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
@@ -40,7 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.codice.pubsub.stomp.QueryExecutor;
+
+import org.codice.pubsub.stomp.QueryAndSend;
 import org.codice.pubsub.stomp.SearchQueryMessage;
 
 import ddf.catalog.CatalogFramework;
@@ -57,30 +60,21 @@ import ddf.catalog.operation.QueryImpl;
  */
 public class SubscriptionProcessor extends TimerTask {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionProcessor.class);
-	private static final int DEFAULT_START_INDEX = 1;
     private static final boolean DEFAULT_IS_ENTERPRISE = false;
-    private static final boolean DEFAULT_REQUESTS_TOTAL_RESULT_COUNT = false;
     private static final String DATE_FILTER = " AND modified AFTER ";
 	private static final String SUBSCRIPTION_MAP = "SubscriptionMap";
-    private String stompHost;
-    private int stompPort = 61613;
-    private String subscribeTopicName = null;
-    private int defaultMaxResults = 1000;
-    private int defaultRequestTimeout = 30000;
+	private static final int NUM_QUERY_SEND_THREADS = 10;
+	
 	ConfigurationAdmin configAdmin = null;
 	private Configuration subscriptionMap = null;
 	private CatalogFramework catalogFramework;
 	private DateTime timestamp = null;
+	private QueryAndSend queryAndSend = null;
 	
-	public SubscriptionProcessor( ConfigurationAdmin configAdmin, CatalogFramework catalogFramework, String stompHost, 
-    		int stompPort, int defaultMaxResults, int defaultRequestTimeout, String subscribeTopicName){
+	public SubscriptionProcessor( ConfigurationAdmin configAdmin, CatalogFramework catalogFramework, QueryAndSend queryAndSend){
 		this.configAdmin = configAdmin;
 		this.catalogFramework = catalogFramework;
-    	this.stompHost = stompHost;
-    	this.stompPort = stompPort;
-    	this.defaultMaxResults = defaultMaxResults;
-    	this.defaultRequestTimeout = defaultRequestTimeout;
-    	this.subscribeTopicName = subscribeTopicName;
+    	this.queryAndSend = queryAndSend;
     	
     	timestamp = new DateTime();
 	}
@@ -89,7 +83,7 @@ public class SubscriptionProcessor extends TimerTask {
 	public void run() {
 		LOGGER.debug("Previous Timestamp: {}", timestamp.toString());
 		processSubscriptions();
-		timestamp = new DateTime();
+		//timestamp = new DateTime();
 		LOGGER.debug("Current Timestamp: {}", timestamp.toString());
 	}
 	
@@ -164,13 +158,15 @@ public class SubscriptionProcessor extends TimerTask {
 	         
 	    	if (catalogFramework != null && filter != null){
 	    		LOGGER.trace("Catalog Frameowork: " + catalogFramework.getVersion());                                                                                                                                
-		        	 
-	        	 //Execute Query & Send Results To Topic
-	        	 SortBy sortPolicy = buildSortByMetacardIdPolicy();
-		         QueryImpl queryImpl = new QueryImpl(filter, DEFAULT_START_INDEX, defaultMaxResults, sortPolicy,
-		        		 DEFAULT_REQUESTS_TOTAL_RESULT_COUNT, defaultRequestTimeout);
-	        	 QueryExecutor qExec = new QueryExecutor(catalogFramework, stompHost, stompPort, subscribeTopicName);
-	        	 qExec.execute(queryImpl, DEFAULT_IS_ENTERPRISE, queryMsg.getSubscriptionId());
+		        
+		     	//Starts this class in a thread
+		     	ExecutorService executor = Executors.newFixedThreadPool(NUM_QUERY_SEND_THREADS);
+		     	queryAndSend.setEnterprise(DEFAULT_IS_ENTERPRISE);
+		     	queryAndSend.setFilter(filter);
+		     	queryAndSend.setSubscriptionId(queryMsg.getSubscriptionId());
+		     	queryAndSend.setProcessor(this);
+		     	Runnable worker = queryAndSend;
+		     	executor.execute(worker);	
 	    	}
     	}
 	}
@@ -181,4 +177,14 @@ public class SubscriptionProcessor extends TimerTask {
         SortByImpl sortByImpl = new SortByImpl(propertyName, sortOrder);
         return sortByImpl;
     }
+
+	public DateTime getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(DateTime timestamp) {
+		this.timestamp = timestamp;
+	}
+    
+    
 }

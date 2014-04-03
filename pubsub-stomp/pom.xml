@@ -130,7 +130,6 @@
 						</java.util.logging.config.file>
 						<log4j.configuration><![CDATA[file://${basedir}/src/test/config/logging/log4j.properties]]>
 						</log4j.configuration>
-						<com.lmco.stratumfive.ui.framework.engine.test.data.dir>${basedir}/src/test/resources</com.lmco.stratumfive.ui.framework.engine.test.data.dir>
 					</systemPropertyVariables>
 					<forkMode>once</forkMode>
 				</configuration>

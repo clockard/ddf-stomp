@@ -17,6 +17,7 @@ package org.codice.pubsub.server;
 
 import java.util.Timer;
 
+import org.codice.pubsub.stomp.QueryAndSend;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -33,11 +34,10 @@ import ddf.catalog.CatalogFramework;
  */
 public class SubscriptionServer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionServer.class);
-	private static final long POLL_TIME = 60000;
+	private static final long POLL_TIME = 5000;
 	private static final long TIME_DELAY = 0;
 	
-	public SubscriptionServer(BundleContext bundleContext, CatalogFramework catalogFramework, String stompHost, 
-    		int stompPort, String destTopicName, int defaultMaxResults, int defaultRequestTimeout, String subscribeTopicName){
+	public SubscriptionServer(BundleContext bundleContext, CatalogFramework catalogFramework, QueryAndSend queryAndSend){
 		Timer timer = null;
 		ConfigurationAdmin configAdmin = null;
     	
@@ -51,8 +51,7 @@ public class SubscriptionServer {
     	}
     	
     	if (configAdmin != null){
-    		SubscriptionProcessor processor = new SubscriptionProcessor(configAdmin, catalogFramework, stompHost, 
-            		stompPort, defaultMaxResults, defaultRequestTimeout, subscribeTopicName);
+    		SubscriptionProcessor processor = new SubscriptionProcessor(configAdmin, catalogFramework, queryAndSend);
 	    	//Poll Catalog for results
 	    	timer = new Timer();
 	    	timer.schedule(processor, TIME_DELAY, POLL_TIME);

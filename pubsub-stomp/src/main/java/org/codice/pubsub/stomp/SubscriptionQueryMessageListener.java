@@ -69,9 +69,8 @@ import ddf.catalog.operation.QueryImpl;
 public class SubscriptionQueryMessageListener implements Runnable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionQueryMessageListener.class);
 	private static final int NTHREDS = 1;
-	private static final int DEFAULT_START_INDEX = 1;
+	private static final int NUM_QUERY_SEND_THREADS = 10;
     private static final boolean DEFAULT_IS_ENTERPRISE = false;
-    private static final boolean DEFAULT_REQUESTS_TOTAL_RESULT_COUNT = false;
     private static final String SUBSCRIPTION_MAP = "SubscriptionMap";
     private static final String ACTION_CREATE = "CREATE";
     private static final String ACTION_UPDATE = "UPDATE";
@@ -84,13 +83,10 @@ public class SubscriptionQueryMessageListener implements Runnable {
     private static final String TTL_TYPE_YEARS = "YEARS";
     
     private String user = "admin";
-    private String password = "passwrod";
+    private String password = "password";
     private String stompHost;
     private int stompPort = 61613;
     private String destTopicName = null;
-    private String subscribeTopicName = null;
-    private int defaultMaxResults = 1000;
-    private int defaultRequestTimeout = 30000;
     private MessageConsumer consumer = null;
     private Connection connection = null;
     private Session session = null;
@@ -99,17 +95,16 @@ public class SubscriptionQueryMessageListener implements Runnable {
     private Configuration subscriptionMap = null;
     private Map<String, Calendar> subscriptionTtlMap = null;
     private Timer timer = null;
+    private QueryAndSend queryAndSend = null;
     
     public SubscriptionQueryMessageListener(CatalogFramework catalogFramework, BundleContext bundleContext, String stompHost, 
-    		int stompPort, String destTopicName, int defaultMaxResults, int defaultRequestTimeout, String subscribeTopicName){
+    		int stompPort, String destTopicName, QueryAndSend queryAndSend){
     	this.catalogFramework = catalogFramework;
     	this.bundleContext = bundleContext;
     	this.stompHost = stompHost;
     	this.stompPort = stompPort;
     	this.destTopicName = destTopicName;
-    	this.defaultMaxResults = defaultMaxResults;
-    	this.defaultRequestTimeout = defaultRequestTimeout;
-    	this.subscribeTopicName = subscribeTopicName;
+    	this.queryAndSend = queryAndSend;
     	
     	//Map to keep track of subscription TTL values to be tracked
     	subscriptionTtlMap = new HashMap<String,Calendar>();
@@ -134,8 +129,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
     	timer = new Timer();
     	timer.schedule(new SubscriptionTtlWatcher(subscriptionTtlMap, this), 0, 60000);
     	
-    	SubscriptionServer svr = new SubscriptionServer(bundleContext, catalogFramework, stompHost, stompPort, destTopicName, 
-    			defaultMaxResults, defaultRequestTimeout, subscribeTopicName);
+    	SubscriptionServer svr = new SubscriptionServer(bundleContext, catalogFramework, queryAndSend);
     	
     	execute();
     }
@@ -145,7 +139,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
     	//Starts this class in a thread
     	ExecutorService executor = Executors.newFixedThreadPool(NTHREDS);
     	SubscriptionQueryMessageListener lsnr = new SubscriptionQueryMessageListener(catalogFramework, bundleContext, stompHost, 
-        		stompPort, destTopicName, defaultMaxResults, defaultRequestTimeout, subscribeTopicName);
+        		stompPort, destTopicName, queryAndSend);
     	Runnable worker = lsnr;
     	executor.execute(worker);	
     }
@@ -305,12 +299,13 @@ public class SubscriptionQueryMessageListener implements Runnable {
 		    	 queryMsg.setCreationDate(now.getTimeInMillis());
 		    	 queryMsg.setLastModifiedDate(now.getTimeInMillis());
 		    	 
-		    	 //Execute Query & Send Results To Topic
-		    	 SortBy sortPolicy = buildSortByMetacardIdPolicy();
-		         QueryImpl queryImpl = new QueryImpl(filter, DEFAULT_START_INDEX, defaultMaxResults, sortPolicy,
-		        		 DEFAULT_REQUESTS_TOTAL_RESULT_COUNT, defaultRequestTimeout);
-		    	 QueryExecutor qExec = new QueryExecutor(catalogFramework, stompHost, stompPort, subscribeTopicName);
-		    	 qExec.execute(queryImpl, DEFAULT_IS_ENTERPRISE, queryMsg.getSubscriptionId());
+		     	//Starts this class in a thread
+		     	ExecutorService executor = Executors.newFixedThreadPool(NUM_QUERY_SEND_THREADS);
+		     	queryAndSend.setEnterprise(DEFAULT_IS_ENTERPRISE);
+		     	queryAndSend.setFilter(filter);
+		     	queryAndSend.setSubscriptionId(subscriptionId);
+		     	Runnable worker = queryAndSend;
+		     	executor.execute(worker);	
 		    	 
 		    	//Add to Subscription Map
 		    	ObjectMapper mapper = new ObjectMapper();

@@ -51,7 +51,6 @@ public class StompPublisher {
     	user =  "admin";
     	password = "password";
     	destination = subscribeTopicName + subscriptionId;
-    	
     	StompJmsConnectionFactory factory = new StompJmsConnectionFactory();
         factory.setBrokerURI("tcp://" + stompHost + ":" + stompPort);
 
