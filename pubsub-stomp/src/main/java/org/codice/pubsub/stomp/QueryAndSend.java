@@ -16,9 +16,10 @@
 package org.codice.pubsub.stomp;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
-import org.codice.pubsub.server.SubscriptionProcessor;
+import org.codice.pubsub.server.QueryControlInfo;
 import org.joda.time.DateTime;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
@@ -41,7 +42,7 @@ import ddf.catalog.transform.CatalogTransformerException;
  * @author damonsjones
  *
  */
-public class QueryAndSend implements Runnable{
+public class QueryAndSend implements Callable{
 	private static final String TRANSFORMER_ID = "geojson";
 	private static final int DEFAULT_START_INDEX = 1;
     private static final boolean DEFAULT_REQUESTS_TOTAL_RESULT_COUNT = false;
@@ -55,7 +56,7 @@ public class QueryAndSend implements Runnable{
     private Filter filter;
     private boolean isEnterprise = false;
     private String subscriptionId = null;
-    private SubscriptionProcessor processor = null;
+    private QueryControlInfo ctrlInfo = null;
 
 	public QueryAndSend(CatalogFramework catalogFramework, String stompHost, int stompPort, String subscribeTopicName, 
 			int defaultMaxResults, int defaultRequestTimeout) {
@@ -66,6 +67,9 @@ public class QueryAndSend implements Runnable{
 	}
 
 	private void execute() {
+		long startTime = System.currentTimeMillis();
+		ctrlInfo = new QueryControlInfo();
+		ctrlInfo.setSubscriptionId(subscriptionId);
 		 
 		SortBy sortPolicy = buildSortByMetacardIdPolicy();
 		 QueryImpl queryImpl = new QueryImpl(filter, DEFAULT_START_INDEX, defaultMaxResults, sortPolicy,
@@ -75,7 +79,7 @@ public class QueryAndSend implements Runnable{
 		QueryResponse queryResponse;
 		try {
 			queryResponse = catalogFramework.query(queryRequest);
-			processor.setTimestamp(new DateTime());
+			ctrlInfo.setQueryEndDateTime(new DateTime());
 
 			// Transform metacards into geojson format
 			BinaryContent content = null;
@@ -110,7 +114,16 @@ public class QueryAndSend implements Runnable{
 		} catch (CatalogTransformerException e) {
 			LOGGER.error("Caught exception while transforming metacard. ", e);
 		}
-
+		
+		long difference = System.currentTimeMillis() - startTime;
+		//TODO: Replace this with a constant 
+		try {
+			Thread.sleep(5000 - difference);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ctrlInfo.setTimeTaken(difference);
 	}
 	
 	public SortBy buildSortByMetacardIdPolicy() {
@@ -119,11 +132,11 @@ public class QueryAndSend implements Runnable{
 	        SortByImpl sortByImpl = new SortByImpl(propertyName, sortOrder);
 	        return sortByImpl;
 	 }
-
-	@Override
-	public void run() {
-		execute();
-		
+	
+	public QueryAndSend newInstance(){
+		QueryAndSend qas = new QueryAndSend(catalogFramework, stompHost, stompPort, subscribeTopicName, 
+				defaultMaxResults, defaultRequestTimeout);
+		return qas;
 	}
 
 	public Filter getFilter() {
@@ -150,12 +163,10 @@ public class QueryAndSend implements Runnable{
 		this.subscriptionId = subscriptionId;
 	}
 
-	public SubscriptionProcessor getProcessor() {
-		return processor;
-	}
-
-	public void setProcessor(SubscriptionProcessor processor) {
-		this.processor = processor;
+	@Override
+	public QueryControlInfo call() throws Exception {
+		execute();
+		return ctrlInfo;
 	}
 	
 }

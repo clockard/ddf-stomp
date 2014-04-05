@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Timer;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,6 +55,7 @@ import org.osgi.service.cm.ConfigurationAdmin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.codice.pubsub.server.SubscriptionServer;
 
 import ddf.catalog.CatalogFramework;
@@ -129,7 +131,11 @@ public class SubscriptionQueryMessageListener implements Runnable {
     	timer = new Timer();
     	timer.schedule(new SubscriptionTtlWatcher(subscriptionTtlMap, this), 0, 60000);
     	
-    	SubscriptionServer svr = new SubscriptionServer(bundleContext, catalogFramework, queryAndSend);
+    	SubscriptionServer subSvr = new SubscriptionServer(bundleContext, catalogFramework, queryAndSend);
+        Runnable task = subSvr;
+        Thread worker = new Thread(task);
+        worker.setName("SubscriptionServer");
+        worker.start();
     	
     	execute();
     }
@@ -301,11 +307,12 @@ public class SubscriptionQueryMessageListener implements Runnable {
 		    	 
 		     	//Starts this class in a thread
 		     	ExecutorService executor = Executors.newFixedThreadPool(NUM_QUERY_SEND_THREADS);
-		     	queryAndSend.setEnterprise(DEFAULT_IS_ENTERPRISE);
-		     	queryAndSend.setFilter(filter);
-		     	queryAndSend.setSubscriptionId(subscriptionId);
-		     	Runnable worker = queryAndSend;
-		     	executor.execute(worker);	
+		     	QueryAndSend qasInst = queryAndSend.newInstance();
+		     	qasInst.setEnterprise(DEFAULT_IS_ENTERPRISE);
+		     	qasInst.setFilter(filter);
+		     	qasInst.setSubscriptionId(subscriptionId);
+		     	Callable worker = qasInst;
+		     	executor.submit(worker);	
 		    	 
 		    	//Add to Subscription Map
 		    	ObjectMapper mapper = new ObjectMapper();
