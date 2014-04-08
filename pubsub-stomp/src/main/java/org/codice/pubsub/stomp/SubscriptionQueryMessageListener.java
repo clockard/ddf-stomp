@@ -284,6 +284,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
 	             filter = CQL.toFilter(cqlText);
 	         } catch (CQLException e) {
 	                     LOGGER.error("Fatal error while trying to build CQL-based Filter from cqlText : "+ cqlText);
+	                     return success;
 	         }   
 	         
 	         //Add CSW Record Mapper Filter Visitor for more CQL filtering options
@@ -295,6 +296,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
 					throw new CswException(ose.getMessage(), CswConstants.INVALID_PARAMETER_VALUE, null);
 				} catch (CswException e) {
 					LOGGER.error(e.getMessage());
+					return success;
 				}
             }
 	         
@@ -321,6 +323,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
 						jsonMsg = mapper.writeValueAsString(queryMsg);
 					} catch (JsonProcessingException e) {
 						LOGGER.error(e.getMessage());
+						return success;
 					}
 		    	
 		    	LOGGER.debug("Store Subscription: " + jsonMsg);

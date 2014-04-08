@@ -51,6 +51,11 @@
 			name="Default Request Timeout" id="defaultRequestTimeout" required="true" type="Integer" 
 			default="300000" 
 		/>
+		<AD
+			description="Type of output transformer (ID)"
+			name="Transformer ID" id="transformerId" required="true" type="String" 
+			default="geojson" 
+		/>
 	</OCD>
 
 	<Designate 	pid="pubsub.subscription.query.service">

@@ -26,6 +26,7 @@
 			<cm:property name="defaultMaxResults" value="1000"/>
 			<cm:property name="defaultRequestTimeout" value="300000"/>
 			<cm:property name="subscribeTopicName" value="/topic/result/"/>
+			<cm:property name="transformerId" value="geojson"/>
 		</cm:default-properties>
 	</cm:property-placeholder>
 
@@ -39,6 +40,7 @@
           <argument value="${subscribeTopicName}"/>
           <argument value="${defaultMaxResults}"/>
           <argument value="${defaultRequestTimeout}"/>
+          <argument value="${transformerId}"/>
           
     </bean>	
 

@@ -18,12 +18,13 @@ package org.codice.pubsub.stomp;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 
-import org.apache.log4j.Logger;
 import org.codice.pubsub.server.QueryControlInfo;
 import org.joda.time.DateTime;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
 import org.opengis.filter.sort.SortOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.BinaryContent;
@@ -43,11 +44,10 @@ import ddf.catalog.transform.CatalogTransformerException;
  *
  */
 public class QueryAndSend implements Callable{
-	private static final String TRANSFORMER_ID = "geojson";
 	private static final int DEFAULT_START_INDEX = 1;
     private static final boolean DEFAULT_REQUESTS_TOTAL_RESULT_COUNT = false;
 	private CatalogFramework catalogFramework = null;
-	private static Logger LOGGER = Logger.getLogger(QueryAndSend.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(QueryAndSend.class);
     private String stompHost;
     private int stompPort;
     private int defaultMaxResults;
@@ -57,13 +57,15 @@ public class QueryAndSend implements Callable{
     private boolean isEnterprise = false;
     private String subscriptionId = null;
     private QueryControlInfo ctrlInfo = null;
+    private String transformerId = null;
 
 	public QueryAndSend(CatalogFramework catalogFramework, String stompHost, int stompPort, String subscribeTopicName, 
-			int defaultMaxResults, int defaultRequestTimeout) {
+			int defaultMaxResults, int defaultRequestTimeout, String transformerId) {
 		this.catalogFramework = catalogFramework;
 		this.stompHost = stompHost;
 		this.stompPort = stompPort;
 		this.subscribeTopicName = subscribeTopicName;
+		this.transformerId = transformerId;
 	}
 
 	private void execute() {
@@ -85,8 +87,9 @@ public class QueryAndSend implements Callable{
 			BinaryContent content = null;
 			
 			if (queryResponse.getHits() > 0){
-				LOGGER.debug("Results returned from query: {}" + queryResponse.getHits());
-				content = catalogFramework.transform(queryResponse, TRANSFORMER_ID,
+				LOGGER.debug("Results returned from query: {}" , queryResponse.getHits());
+				//System.out.println("Results returned from query: " + queryResponse.getHits());
+				content = catalogFramework.transform(queryResponse, transformerId,
 						null);
 				String jsonText = new String(content.getByteArray());
 				
@@ -135,7 +138,7 @@ public class QueryAndSend implements Callable{
 	
 	public QueryAndSend newInstance(){
 		QueryAndSend qas = new QueryAndSend(catalogFramework, stompHost, stompPort, subscribeTopicName, 
-				defaultMaxResults, defaultRequestTimeout);
+				defaultMaxResults, defaultRequestTimeout, transformerId);
 		return qas;
 	}
 
