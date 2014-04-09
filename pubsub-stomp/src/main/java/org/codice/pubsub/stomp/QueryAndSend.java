@@ -58,6 +58,7 @@ public class QueryAndSend implements Callable{
     private String subscriptionId = null;
     private QueryControlInfo ctrlInfo = null;
     private String transformerId = null;
+    private DateTime newTime = null;
 
 	public QueryAndSend(CatalogFramework catalogFramework, String stompHost, int stompPort, String subscribeTopicName, 
 			int defaultMaxResults, int defaultRequestTimeout, String transformerId) {
@@ -72,6 +73,7 @@ public class QueryAndSend implements Callable{
 		long startTime = System.currentTimeMillis();
 		ctrlInfo = new QueryControlInfo();
 		ctrlInfo.setSubscriptionId(subscriptionId);
+		ctrlInfo.setQueryEndDateTime(newTime);
 		 
 		SortBy sortPolicy = buildSortByMetacardIdPolicy();
 		 QueryImpl queryImpl = new QueryImpl(filter, DEFAULT_START_INDEX, defaultMaxResults, sortPolicy,
@@ -81,14 +83,12 @@ public class QueryAndSend implements Callable{
 		QueryResponse queryResponse;
 		try {
 			queryResponse = catalogFramework.query(queryRequest);
-			ctrlInfo.setQueryEndDateTime(new DateTime());
 
 			// Transform metacards into geojson format
 			BinaryContent content = null;
 			
 			if (queryResponse.getHits() > 0){
 				LOGGER.debug("Results returned from query: {}" , queryResponse.getHits());
-				//System.out.println("Results returned from query: " + queryResponse.getHits());
 				content = catalogFramework.transform(queryResponse, transformerId,
 						null);
 				String jsonText = new String(content.getByteArray());
@@ -171,5 +171,15 @@ public class QueryAndSend implements Callable{
 		execute();
 		return ctrlInfo;
 	}
+
+	public DateTime getNewTime() {
+		return newTime;
+	}
+
+	public void setNewTime(DateTime newTime) {
+		this.newTime = newTime;
+	}
+	
+	
 	
 }

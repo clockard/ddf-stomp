@@ -58,7 +58,6 @@ import ddf.catalog.CatalogFramework;
 public class SubscriptionServer implements Runnable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionServer.class);
 	private static final String SUBSCRIPTION_MAP = "SubscriptionMap";
-	private static final String DATE_FILTER = " AND modified AFTER ";
 	private static final int PROCESS_STATUS_RUNNING = 0;
 	private static final int PROCESS_STATUS_NOT_EXIST = 1;
 	private static final int PROCESS_STATUS_COMPLETE = 2;
@@ -68,6 +67,7 @@ public class SubscriptionServer implements Runnable {
 	private CatalogFramework catalogFramework = null;
 	private QueryAndSend queryAndSend = null;
 	private HashMap<String, Future<QueryControlInfo>> processMap = null;
+	private ExecutorService executor = null ;
 	
 	public SubscriptionServer(BundleContext bundleContext, CatalogFramework catalogFramework, QueryAndSend queryAndSend){
 		this.bundleContext = bundleContext;
@@ -75,6 +75,7 @@ public class SubscriptionServer implements Runnable {
 		this.queryAndSend = queryAndSend;
 		
 		processMap = new HashMap<String, Future<QueryControlInfo>>();
+		executor = Executors.newFixedThreadPool(NUM_QUERY_SEND_THREADS);
 	}
 	
 	private void processSubscriptions(){
@@ -107,7 +108,7 @@ public class SubscriptionServer implements Runnable {
 			    				}
 			    			}
 			    		} else if(status == PROCESS_STATUS_NOT_EXIST){
-			    			runQuery(subscriptionMsg, new DateTime());
+			    			runQuery(subscriptionMsg, new DateTime().minusSeconds(1));
 			    		
 			    		}  else if(status == PROCESS_STATUS_NOT_EXIST){
 			    			
@@ -185,11 +186,19 @@ public class SubscriptionServer implements Runnable {
 	    	try {
 				 queryMsg = new ObjectMapper().readValue(msg, SearchQueryMessage.class);
 				 
-				 //Set date / time filter to only get results from last time processor polled
+				 /*
+				  * Set date / time filter to only get results from last time processor polled
+				  * Fetch content between last fetch and current time - 1 second (don't want to miss last millisecond updates).
+				  */
 				 String origQueryMsg = queryMsg.getQueryString();
 				 DateTimeFormatter fmt2 = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-				 LOGGER.debug("String to be processed: {}", origQueryMsg + DATE_FILTER + fmt2.print(timestamp));
-				 queryMsg.setQueryString(origQueryMsg + DATE_FILTER + fmt2.print(timestamp));
+				 String after = fmt2.print(timestamp);
+				 DateTime newTime = DateTime.now().minusSeconds(1);
+				 String before = fmt2.print(newTime);
+				 
+				 String cqlSnippet = " AND modified BEFORE " + before + " AND modified AFTER " + after;
+				 LOGGER.debug("String to be processed: {}", origQueryMsg + cqlSnippet);
+				 queryMsg.setQueryString(origQueryMsg + cqlSnippet);
 
 				//Build Query
 			    	String cqlText = queryMsg.getQueryString();
@@ -218,11 +227,11 @@ public class SubscriptionServer implements Runnable {
 				    	if (catalogFramework != null && filter != null){
 				    		LOGGER.trace("Catalog Frameowork: " + catalogFramework.getVersion());                                                                                                                                
 				    		//Starts QueryAndSend in a thread
-				    		ExecutorService executor = Executors.newFixedThreadPool(NUM_QUERY_SEND_THREADS);
 				    		QueryAndSend qasInst = queryAndSend.newInstance();
 				    		qasInst.setEnterprise(DEFAULT_IS_ENTERPRISE);
 				    		qasInst.setFilter(filter);
 				    		qasInst.setSubscriptionId(queryMsg.getSubscriptionId());
+				    		qasInst.setNewTime(newTime);
 				    		Callable<QueryControlInfo> worker = qasInst;
 				    	    Future<QueryControlInfo> ctrlInfo = executor.submit(worker);
 				    	    processMap.put(queryMsg.getSubscriptionId(), ctrlInfo);	

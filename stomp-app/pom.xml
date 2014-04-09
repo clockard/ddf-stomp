@@ -24,9 +24,19 @@
   <artifactId>stomp-app</artifactId>
   <name>Codice :: PubSub :: STOMP :: App</name>
   <packaging>pom</packaging>
-
+  
+	<dependencies>
+		<dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-karaf</artifactId>
+            <version>5.9.0</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+        </dependency>         
+	</dependencies> 
   <build>
     <plugins>
+	 
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <executions>
@@ -49,25 +59,7 @@
         </executions>
       </plugin>
 
-      <plugin>
-        <groupId>org.apache.karaf.tooling</groupId>
-        <artifactId>features-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>create-kar</id>
-            <goals>
-              <goal>create-kar</goal>
-            </goals>
-            <configuration>
-							<!-- Workaround to prevent features.xml file from being included twice in the kar file. -->
-              <resourcesDir>${project.build.directory}/doesNotExist</resourcesDir>
-              <featuresFile>${basedir}/target/classes/features.xml</featuresFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-			<!-- Puts the features XML file for this app into the maven repo. -->
+	   <!-- Puts the features XML file for this app into the maven repo. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -92,6 +84,49 @@
                   <classifier>activemq</classifier>
                 </artifact>
               </artifacts>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+	  
+	  <plugin>
+        <groupId>org.apache.karaf.tooling</groupId>
+        <artifactId>features-maven-plugin</artifactId>
+        <version>2.2.11</version>
+
+        <executions>
+          <execution>
+            <id>add-features-to-repo</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>add-features-to-repo</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>mvn:org.apache.activemq/activemq-karaf/5.9.0/xml/features</descriptor>
+              </descriptors>
+              <features>
+                <feature>activemq</feature>
+              </features>
+              <repository>target/features-repo</repository>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+	  
+      <plugin>
+        <groupId>org.apache.karaf.tooling</groupId>
+        <artifactId>features-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-kar</id>
+            <goals>
+              <goal>create-kar</goal>
+            </goals>
+            <configuration>
+							<!-- Workaround to prevent features.xml file from being included twice in the kar file. -->
+              <resourcesDir>${project.build.directory}/doesNotExist</resourcesDir>
+              <featuresFile>${basedir}/target/classes/features.xml</featuresFile>
             </configuration>
           </execution>
         </executions>

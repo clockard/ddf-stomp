@@ -98,6 +98,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
     private Map<String, Calendar> subscriptionTtlMap = null;
     private Timer timer = null;
     private QueryAndSend queryAndSend = null;
+    private Thread subServerWorker = null;
     
     public SubscriptionQueryMessageListener(CatalogFramework catalogFramework, BundleContext bundleContext, String stompHost, 
     		int stompPort, String destTopicName, QueryAndSend queryAndSend){
@@ -133,9 +134,9 @@ public class SubscriptionQueryMessageListener implements Runnable {
     	
     	SubscriptionServer subSvr = new SubscriptionServer(bundleContext, catalogFramework, queryAndSend);
         Runnable task = subSvr;
-        Thread worker = new Thread(task);
-        worker.setName("SubscriptionServer");
-        worker.start();
+        subServerWorker = new Thread(task);
+        subServerWorker.setName("SubscriptionServer");
+        subServerWorker.start();
     	
     	execute();
     }
@@ -394,6 +395,7 @@ public class SubscriptionQueryMessageListener implements Runnable {
 			connection = null;
 			timer.cancel();
 			timer.purge();
+			subServerWorker.interrupt();
 		} catch (JMSException e) {
 			LOGGER.error(e.getMessage());
 		}
