@@ -1,0 +1,8 @@
+{
+  "subscriptionId" : "faf4e8493h389fh4398f3h0001",
+  "action" : "CREATE",
+  "subscriptionTtlType" : "HOURS",
+  "subscriptionTtl" : 90,
+  "queryString" : "title LIKE 'inn'"
+  
+}

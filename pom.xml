@@ -87,6 +87,7 @@
   <modules>
     <module>pubsub-stomp</module>
 	<module>stomp-app</module>
+	<module>stomp-examples</module>
   </modules>
 
   <scm>

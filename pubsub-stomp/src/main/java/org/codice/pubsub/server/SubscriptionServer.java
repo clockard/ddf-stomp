@@ -82,6 +82,7 @@ public class SubscriptionServer implements Runnable {
 		while(!Thread.currentThread().isInterrupted()){
 			//Fetch Subscriptions
 			Dictionary subMap = getSubscriptionMap();
+
 			if (subMap != null){
 		    	Enumeration e = subMap.keys();
 		    	while(e.hasMoreElements()){
@@ -116,6 +117,12 @@ public class SubscriptionServer implements Runnable {
 			    		}
 		    		}
 		    	}
+	        } else {
+	        	try {
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 	        }
 		}
 	}
